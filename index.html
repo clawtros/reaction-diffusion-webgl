@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+  <head>
+    <title></title>
+    <meta charset="utf-8" />
+    <style>
+      body {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      canvas {
+        margin: auto;
+        height: 90vmin;
+        width: 90vmin;
+      }
+    </style>
+  </head>
+  <body>
+
+    <canvas id="c"></canvas>
+
+    
+    <script id="2d-vertex-shader" type="x-shader/x-vertex">
+      attribute vec2 a_position;
+
+      void main() {
+        gl_Position = vec4(a_position, 0, 1);
+      }
+    </script>
+
+    <script id="2d-fragment-shader" type="x-shader/x-fragment">
+      precision highp float;
+      #define DA .5
+      #define DB .25
+      #define f 0.035
+      #define k 0.0545
+      #define t 1.
+                  
+      uniform float canvasPixels;
+      uniform sampler2D uSampler0;
+      uniform float mouseX;
+      uniform float mouseY;
+      uniform int mousePressed;
+      
+      uniform float convolutionMatrix[9];
+      
+      vec4 get(int x, int y) {
+        return texture2D(uSampler0, vec2(gl_FragCoord.xy - vec2(x, y)) / canvasPixels);
+      }
+
+      vec4 convolve(sampler2D sampler) {
+        vec4 result = vec4(0, 0, 0, 0);
+
+        result += get(-1, -1) * convolutionMatrix[0];
+        result += get(0, -1) * convolutionMatrix[1];
+        result += get(1, -1) * convolutionMatrix[2];
+
+        result += get(-1, 0) * convolutionMatrix[3];
+        result += get(0, 0) * convolutionMatrix[4];
+        result += get(1, 0) * convolutionMatrix[5];
+
+        result += get(-1, 1) * convolutionMatrix[6];
+        result += get(0, 1) * convolutionMatrix[7];
+        result += get(1, 1) * convolutionMatrix[8];
+
+        return result;
+      }
+      
+      void main() {
+        vec4 result = convolve(uSampler0);
+        vec4 current = get(0, 0);
+        float d = distance(vec2(gl_FragCoord.x / canvasPixels, gl_FragCoord.y / canvasPixels), vec2(mouseX, mouseY));
+
+        float a = current.r;
+        float la = result.r;
+        float b = current.b;
+        float lb = result.b;
+        float abb = a * b * b;
+        
+        float nextA = a + (DA * la - abb + (1. - a) * f) * t;
+        float nextB = b + (DB * lb + abb - (f + k) * b) * t;
+        if (mousePressed == 1) {
+          if (d < .02) {
+            nextB = 255.;
+          }
+        }
+        
+        gl_FragColor = vec4(
+          nextA, nextA,
+          nextB, nextB);
+      }
+    </script>
+    <script src="fastrd.js"></script>
+  </body>
+</html>
