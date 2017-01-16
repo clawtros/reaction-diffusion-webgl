@@ -1,5 +1,5 @@
-const PCT_B = 0.0001,
-      RES = 2048;
+const PCT_B = 0.01,
+      RES = 256;
 
 function randomCanvas(size) {
   var canvas = document.createElement("canvas"),
@@ -12,19 +12,12 @@ function randomCanvas(size) {
       data = imgdata.data;
 
   for (var i = 0; i < data.length; i += 4) {
-    data[i] = 255 - Math.random() * 32;
-    data[i + 1] = Math.random() < PCT_B ? 255 : Math.random() * 32;
-    data[i + 2] = 0;
+    data[i] = 255;
+    data[i + 1] = Math.random() * 255;
+    data[i + 2] = Math.random() * 255 < PCT_B ? 255 : 0;
     data[i + 3] = 255;
   }
   ctx.putImageData(imgdata, 0, 0);
-
-  for (let i = 0; i < 10; i++) {
-    let x = parseInt(Math.random * size),
-        y = parseInt(Math.random * size);
-    ctx.fillStyle = "black";
-    ctx.fillRect(x, y, Math.random() * 100, Math.random() * 100);
-  }
   return canvas;
 }
 
@@ -74,63 +67,41 @@ function createAndSetupTexture(gl) {
 
 function Fracs(options) {
   var options = options || {},
-      filters = {
-        normal: [
-          0, 0, 0,
-          0, 1, 0,
-          0, 0, 0
-        ],
-        edge: [
-           -1, -1, -1,
-           -1, 8, -1,
-           -1, -1, -1
-        ],
-        laplace: [
-           0.05, 0.2, 0.05,
-           0.2, -1, 0.2,
-           0.05, 0.2, 0.05
-        ],
-        smooth: [
-          1/9., 1/9., 1/9.,
-          1/9., 1/9., 1/9.,
-          1/9., 1/9., 1/9.
-        ]
-      },
+      laplace = [
+        0.05, 0.2, 0.05,
+        0.2, -1, 0.2,
+        0.05, 0.2, 0.05
+      ],
       canvas = document.getElementById(options.canvasId || 'c'),
-      resolution = options.resolution || 512,
+      resolution = options.resolution || RES,
       noiseCanvas = randomCanvas(resolution),
       mouseX = 0,
       mouseY = 0,
-      mousePressed = false;
-
-  canvas.addEventListener("mousemove", e=>{
-    const boundingRect = canvas.getBoundingClientRect();
-    mouseX = e.offsetX / boundingRect.width;
-    mouseY = 1- e.offsetY / boundingRect.width;
-  })
-
-  document.addEventListener("mouseup", e=>{
-    mousePressed = false;
-  })
-
-  document.addEventListener("mousedown", e=>{
-    mousePressed = true;
-  })
+      mousePressed = false,
+      convolveShader,
+      vertexShader,
+      positionLocation,
+      gravityLocation,
+      paintSizeLocation,
+      resolutionLocation,
+      mouseXlocation,
+      mouseYlocation,
+      mousePressedLocation,
+      daLocation,
+      dbLocation,
+      fLocation,
+      kLocation,
+      tLocation,
+      textures = [],
+      framebuffers = [],
+      currentFbo = 0,
+      image = document.createElement("img");
   
   canvas.width = resolution;
   canvas.height = resolution;
   var gl = canvas.getContext('experimental-webgl'),
       buffer = gl.createBuffer(),
-      convolveShader,
-      vertexShader,
-      positionLocation,
-      resolutionLocation,
-      mouseXlocation,
-      mouseYlocation,
-      mousePressedLocation;
-
-  var originalImageTexture = createAndSetupTexture(gl),
-      image = document.createElement("img");
+      originalImageTexture = createAndSetupTexture(gl);
   image.src = noiseCanvas.toDataURL();
 
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
@@ -153,9 +124,11 @@ function Fracs(options) {
   }
 
   gl.activeTexture(gl.TEXTURE0);
-  gl.bindTexture(gl.TEXTURE_2D, originalImageTexture);
+  function reset() {
+    gl.bindTexture(gl.TEXTURE_2D, originalImageTexture);    
+  }
 
-
+  reset();
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(
     gl.ARRAY_BUFFER,
@@ -178,7 +151,15 @@ function Fracs(options) {
   resolutionLocation = gl.getUniformLocation(program, "canvasPixels");
   kernelLocation = gl.getUniformLocation(program, "convolutionMatrix");
   yFlipLocation = gl.getUniformLocation(program, "yFlip");
+  daLocation = gl.getUniformLocation(program, "DA");
+  dbLocation = gl.getUniformLocation(program, "DB"); 
+  fLocation = gl.getUniformLocation(program, "f");
+  kLocation = gl.getUniformLocation(program, "k");
+  tLocation = gl.getUniformLocation(program, "t");
+  paintSizeLocation = gl.getUniformLocation(program, "paintSize");
+  gravityLocation = gl.getUniformLocation(program, "gravity");
 
+  
   mouseXLocation = gl.getUniformLocation(program, "mouseX");
   mouseYLocation = gl.getUniformLocation(program, "mouseY");
   mousePressedLocation = gl.getUniformLocation(program, "mousePressed");
@@ -198,19 +179,40 @@ function Fracs(options) {
     gl.viewport(0, 0, width, height);
   }
 
-  var currentFbo = 0;
+  canvas.addEventListener("mousemove", e=>{
+    const boundingRect = canvas.getBoundingClientRect();
+    mouseX = e.offsetX / boundingRect.width;
+    mouseY = 1- e.offsetY / boundingRect.width;
+  })
+
+  document.addEventListener("mouseup", e=>{
+    mousePressed = false;
+  })
+
+  canvas.addEventListener("mousedown", e=>{
+    mousePressed = true;
+  })
 
   return {
-    update: function() {
+    update: function(state) {
       setFramebuffer(framebuffers[currentFbo], canvas.width, canvas.height);      
-      gl.uniform1fv(kernelLocation, filters["laplace"]);
+      gl.uniform1fv(kernelLocation, laplace);
       gl.uniform1f(mouseXLocation, parseFloat(mouseX));
       gl.uniform1f(mouseYLocation, parseFloat(mouseY));
       gl.uniform1i(mousePressedLocation, mousePressed ? 1 : 0);
+      gl.uniform1f(daLocation, parseFloat(state.DA));
+      gl.uniform1f(dbLocation, parseFloat(state.DB));
+      gl.uniform1f(fLocation, parseFloat(state.f));
+      gl.uniform1f(kLocation, parseFloat(state.k));
+      gl.uniform1f(tLocation, parseFloat(state.t));
+      gl.uniform1f(paintSizeLocation, parseFloat(state.paintSize));
+      gl.uniform1f(gravityLocation, parseFloat(state.gravity));
+      
       gl.drawArrays(gl.TRIANGLES, 0, 6);
       gl.bindTexture(gl.TEXTURE_2D, textures[currentFbo]);
       currentFbo = (currentFbo + 1) % 2;
     },
+    reset,
     render: function() {
       setFramebuffer(undefined, canvas.width, canvas.height);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
@@ -218,19 +220,3 @@ function Fracs(options) {
     canvas: canvas
   }
 }
-
-var fracs = Fracs({
-  canvasId: "c",
-  resolution: 512
-});
-
-function go() {
-  requestAnimationFrame(go);
-
-  fracs.update();
-  fracs.update();
-  fracs.update();
-  fracs.render();
-}
-
-go();
