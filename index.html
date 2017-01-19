@@ -16,12 +16,14 @@
         cursor: pointer;
       }
     </style>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.js"></script>
   </head>
   <body>
 
     <canvas id="c"></canvas>
 
-    
+
     <script id="2d-vertex-shader" type="x-shader/x-vertex">
       attribute vec2 a_position;
 
@@ -35,7 +37,7 @@
       #define DIAGONAL 0.05
       #define ADJACENT 0.2
       #define CENTER -1.
-                         
+
       uniform float canvasPixels;
       uniform sampler2D uSampler0;
       uniform float mouseX;
@@ -43,15 +45,15 @@
       uniform int mousePressed;
 
       uniform float DA;
-      uniform float DB; 
+      uniform float DB;
       uniform float f;
       uniform float k;
       uniform float t;
       uniform float paintSize;
       uniform float gravity;
-      
+
       uniform float convolutionMatrix[9];
-      
+
       vec4 get(int x, int y) {
         return texture2D(uSampler0, vec2(vec2(gl_FragCoord.x, gl_FragCoord.y) - vec2(x, y)) / canvasPixels);
       }
@@ -73,7 +75,7 @@
 
         return result;
       }
-      
+
       void main() {
         vec4 result = convolve(uSampler0);
         vec4 current = get(0, 0);
@@ -86,7 +88,7 @@
         float abb = a * b * b;
         float _f = f;
         float _k = k;
-        
+
         float nextA = a + (DA * la - abb + (1. - a) * _f) * t;
         float nextB = b + (DB * lb + abb - (_f + _k) * b) * t;
         if (mousePressed == 1) {
@@ -94,7 +96,7 @@
             nextB = 255.;
           }
         }
-        
+
         gl_FragColor = vec4(
           nextA, 0,
           nextB, 1. - nextB);
@@ -104,7 +106,7 @@
     <script src="fastrd.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function() {
-        
+
         var fracs = Fracs({
           canvasId: "c"
         }),
@@ -123,7 +125,7 @@
         function go() {
           requestAnimationFrame(go);
           for(var i = 0; i < state.updatesPerFrame; i++) {
-            fracs.update(state);            
+            fracs.update(state);
           }
 
           fracs.render();
@@ -137,10 +139,10 @@
         gui.add(state, "k")
         gui.add(state, "t")
         gui.add(state, "paintSize")
-        gui.add(state, "gravity")        
+        gui.add(state, "gravity")
         gui.add(state, "updatesPerFrame")
         gui.add(state, "reset")
-        
+
         go();
 
       })
