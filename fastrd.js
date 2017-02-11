@@ -1,4 +1,4 @@
-const PCT_B = 0.01,
+const PCT_B = 0.0,
       RES = 256;
 
 function randomCanvas(size) {

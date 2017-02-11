@@ -102,7 +102,7 @@
           nextB, 1. - nextB);
       }
     </script>
-    <script src="dat.gui.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.js"></script>
     <script src="fastrd.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function() {
@@ -133,14 +133,13 @@
         window.fracs = fracs;
 
         var gui = new dat.GUI();
-        gui.add(state, "DA")
-        gui.add(state, "DB")
-        gui.add(state, "f")
-        gui.add(state, "k")
-        gui.add(state, "t")
-        gui.add(state, "paintSize")
-        gui.add(state, "gravity")
-        gui.add(state, "updatesPerFrame")
+        gui.add(state, "DA", 0, 1).step(0.01)
+        gui.add(state, "DB", 0, 1).step(0.01)
+        gui.add(state, "f", 0, 1).step(0.001)
+        gui.add(state, "k", 0, 1).step(0.001)
+        gui.add(state, "paintSize", 0, 1).step(0.01)
+        gui.add(state, "gravity", -.15, .15).step(0.01)
+        gui.add(state, "updatesPerFrame", 0, 50)
         gui.add(state, "reset")
 
         go();
