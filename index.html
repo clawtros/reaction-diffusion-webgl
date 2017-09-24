@@ -24,9 +24,25 @@
 
     <script id="2d-vertex-shader" type="x-shader/x-vertex">
       attribute vec2 a_position;
+      uniform sampler2D uSampler0;
 
       void main() {
         gl_Position = vec4(a_position, 0, 1);
+      }
+    </script>
+
+    <script id="2d-drawing-shader" type="x-shader/x-fragment">
+      precision highp float;
+      uniform float canvasPixels;
+      uniform sampler2D uSampler0;
+
+      vec4 get(int x, int y) {
+        return texture2D(uSampler0, vec2(vec2(gl_FragCoord.x, gl_FragCoord.y) - vec2(x, y)) / canvasPixels);
+      }
+
+      void main() {
+        vec4 current = get(0,0);
+        gl_FragColor = vec4(1., 0, 0, 1.);
       }
     </script>
 
@@ -117,7 +133,7 @@
               paintSize: 0.01,
               reset: fracs.reset,
               gravity: 0,
-              updatesPerFrame: 3
+              updatesPerFrame: 1
             }
 
         function go() {
@@ -133,9 +149,9 @@
         var gui = new dat.GUI();
         gui.add(state, "DA", 0, 1).step(0.01)
         gui.add(state, "DB", 0, 1).step(0.01)
-        gui.add(state, "f", 0, 1).step(0.001)
-        gui.add(state, "k", 0, 1).step(0.001)
-        gui.add(state, "paintSize", 0, 1).step(0.01)
+        gui.add(state, "f", 0, .1).step(0.001)
+        gui.add(state, "k", 0, .1).step(0.001)
+        gui.add(state, "paintSize", 0, .25).step(0.01)
         gui.add(state, "gravity", -.15, .15).step(0.01)
         gui.add(state, "updatesPerFrame", 0, 50)
         gui.add(state, "reset")

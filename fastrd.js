@@ -1,4 +1,4 @@
-const PCT_B = 0.0,
+const PCT_B = 0.1,
       RES = 256;
 
 function randomCanvas(size) {
@@ -114,7 +114,7 @@ function Fracs(options) {
     textures.push(texture);
 
     gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA, image.width, image.height, 0,
+      gl.TEXTURE_2D, 0, gl.RGBA, 256, 256, 0,
       gl.RGBA, gl.UNSIGNED_BYTE, null);
 
     var fbo = gl.createFramebuffer();
