@@ -1,4 +1,4 @@
-const PCT_B = 0.5,
+const PCT_B = 50,
       RES = 1024;
 
 function randomCanvas(size, randomness) {
@@ -97,12 +97,6 @@ function Fracs(options) {
   var gl = canvas.getContext('experimental-webgl'),
       buffer = gl.createBuffer(),
       originalImageTexture = createAndSetupTexture(gl);
-  image.src = noiseCanvas.toDataURL();
-
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
-                randomCanvas(resolution)
-                  .getContext('2d')
-                  .getImageData(0, 0, resolution, resolution));
 
   var textures = [];
   var framebuffers = [];
@@ -121,6 +115,12 @@ function Fracs(options) {
   }
 
   function reset() {
+
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+                  randomCanvas(resolution, PCT_B)
+                    .getContext('2d')
+                    .getImageData(0, 0, resolution, resolution));
+
     gl.bindTexture(gl.TEXTURE_2D, originalImageTexture);
   }
 

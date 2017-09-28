@@ -35,7 +35,7 @@
       uniform float canvasPixels;
       uniform sampler2D uSampler0;
 
-      const float COLOR_MIN = 0.2, COLOR_MAX = 0.4;
+      const float COLOR_MIN = 0.4, COLOR_MAX = 0.6;
       
       void main() {
 	    float v = (COLOR_MAX - texture2D(uSampler0, gl_FragCoord.xy / canvasPixels).x) / (COLOR_MAX - COLOR_MIN) ;
@@ -72,17 +72,17 @@
       vec4 convolve(sampler2D sampler) {
         vec4 result = vec4(0, 0, 0, 0);
 
-        result += get(-1, -1) * (DIAGONAL - gravity);
+        result += get(-1, -1) * (DIAGONAL);
         result += get(0, -1) * (ADJACENT - gravity);
-        result += get(1, -1) * (DIAGONAL - gravity);
+        result += get(1, -1) * (DIAGONAL);
 
         result += get(-1, 0) * ADJACENT;
         result += get(0, 0) * CENTER;
         result += get(1, 0) * ADJACENT;
 
-        result += get(-1, 1) * (DIAGONAL + gravity);
+        result += get(-1, 1) * (DIAGONAL);
         result += get(0, 1) * (ADJACENT + gravity);
-        result += get(1, 1) * (DIAGONAL + gravity);
+        result += get(1, 1) * (DIAGONAL);
 
         return result;
       }
