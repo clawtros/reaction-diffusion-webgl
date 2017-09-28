@@ -24,6 +24,7 @@
     <canvas id="c"></canvas>
     <script id="2d-vertex-shader" type="x-shader/x-vertex">
       attribute vec2 a_position;
+      uniform sampler2D uSampler0;
 
       void main() {
         gl_Position = vec4(a_position, 0, 1);
