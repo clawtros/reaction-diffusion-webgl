@@ -6,7 +6,7 @@
     <style>
       body {
         display: flex;
-        min-height: 100vh;
+        min-height: 100vh; 
       }
 
       canvas {
@@ -29,12 +29,24 @@
         gl_Position = vec4(a_position, 0, 1);
       }
     </script>
+    <script id="2d-render-shader" type="x-shader/x-fragment">
+      precision mediump float;
+      uniform float canvasPixels;
+      uniform sampler2D uSampler0;
 
+      const float COLOR_MIN = 0.2, COLOR_MAX = 0.4;
+      
+      void main() {
+	    float v = (COLOR_MAX - texture2D(uSampler0, gl_FragCoord.xy / canvasPixels).x) / (COLOR_MAX - COLOR_MIN) ;
+//        float v = texture2D(uSampler0, gl_FragCoord.xy / canvasPixels).x;
+	    gl_FragColor = vec4(v, v, v, 1);
+      }
+    </script>
     <script id="2d-fragment-shader" type="x-shader/x-fragment">
       precision highp float;
-      #define DIAGONAL 0.05
-      #define ADJACENT 0.2
-      #define CENTER -1.
+      #define DIAGONAL 0.5
+                  #define ADJACENT 1.
+      #define CENTER -6.
 
       uniform float canvasPixels;
       uniform sampler2D uSampler0;
@@ -87,6 +99,7 @@
         float _f = f;
         float _k = k;
 
+        
         float nextA = a + (DA * la - abb + (1. - a) * _f) * t;
         float nextB = b + (DB * lb + abb - (_f + _k) * b) * t;
         if (mousePressed == 1) {
@@ -96,28 +109,27 @@
         }
 
         gl_FragColor = vec4(
-          nextA, 0,
-          nextB, 1. - nextB);
+          nextA, 1.,
+          nextB, 1.);
       }
     </script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.js"></script>
     <script src="fastrd.js"></script>
     <script>
-      document.addEventListener("DOMContentLoaded", function() {
+      window.addEventListener("load", function() {
 
         var fracs = Fracs({
           canvasId: "c"
         }),
             state = {
-              DA: 1.,
-              DB: 0.25,
-              f: 0.054,
-              k: 0.063,
+              DA: 0.2,
+              DB: 0.1,
+              f: 0.02,
+              k: 0.053,
               t: 1.,
-              paintSize: 0.01,
+              paintSize: 0.001,
               reset: fracs.reset,
               gravity: 0,
-              updatesPerFrame: 3
+              updatesPerFrame: 30
             }
 
         function go() {
@@ -125,17 +137,15 @@
           for(var i = 0; i < state.updatesPerFrame; i++) {
             fracs.update(state);
           }
-
           fracs.render();
         }
-        window.fracs = fracs;
-
+        
         var gui = new dat.GUI();
-        gui.add(state, "DA", 0, 1).step(0.01)
-        gui.add(state, "DB", 0, 1).step(0.01)
-        gui.add(state, "f", 0, 1).step(0.001)
-        gui.add(state, "k", 0, 1).step(0.001)
-        gui.add(state, "paintSize", 0, 1).step(0.01)
+        gui.add(state, "DA", 0, .2).step(0.01)
+        gui.add(state, "DB", 0, .2).step(0.01)
+        gui.add(state, "f", 0, .2).step(0.001)
+        gui.add(state, "k", 0, .2).step(0.001)
+        gui.add(state, "paintSize", 0.001, 1).step(0.001)
         gui.add(state, "gravity", -.15, .15).step(0.01)
         gui.add(state, "updatesPerFrame", 0, 50)
         gui.add(state, "reset")

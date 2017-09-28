@@ -1,7 +1,7 @@
-const PCT_B = 0.0,
-      RES = 256;
+const PCT_B = 0.5,
+      RES = 1024;
 
-function randomCanvas(size) {
+function randomCanvas(size, randomness) {
   var canvas = document.createElement("canvas"),
       ctx = canvas.getContext('2d');
 
@@ -14,7 +14,7 @@ function randomCanvas(size) {
   for (var i = 0; i < data.length; i += 4) {
     data[i] = 255;
     data[i + 1] = Math.random() * 255;
-    data[i + 2] = Math.random() * 255 < PCT_B ? 255 : 0;
+    data[i + 2] = Math.random() * 100 < PCT_B ? Math.random() * 255 : 0;
     data[i + 3] = 255;
   }
   ctx.putImageData(imgdata, 0, 0);
@@ -53,7 +53,7 @@ var GLUtils = {
   }
 }
 
-function createAndSetupTexture(gl) {
+function createAndSetupTexture(gl, initial_state) {
   var texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -67,11 +67,6 @@ function createAndSetupTexture(gl) {
 
 function Fracs(options) {
   var options = options || {},
-      laplace = [
-        0.05, 0.2, 0.05,
-        0.2, -1, 0.2,
-        0.05, 0.2, 0.05
-      ],
       canvas = document.getElementById(options.canvasId || 'c'),
       resolution = options.resolution || RES,
       noiseCanvas = randomCanvas(resolution),
@@ -104,18 +99,20 @@ function Fracs(options) {
       originalImageTexture = createAndSetupTexture(gl);
   image.src = noiseCanvas.toDataURL();
 
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image)
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE,
+                randomCanvas(resolution)
+                  .getContext('2d')
+                  .getImageData(0, 0, resolution, resolution));
 
   var textures = [];
   var framebuffers = [];
 
-  for (var ii = 0; ii < 4; ++ii) {
+  for (var ii = 0; ii < 2; ++ii) {
     var texture = createAndSetupTexture(gl);
     textures.push(texture);
 
     gl.texImage2D(
-      gl.TEXTURE_2D, 0, gl.RGBA, image.width, image.height, 0,
-      gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.TEXTURE_2D, 0, gl.RGBA, RES, RES, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
 
     var fbo = gl.createFramebuffer();
     framebuffers.push(fbo);
@@ -123,9 +120,8 @@ function Fracs(options) {
     gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, texture, 0);
   }
 
-  gl.activeTexture(gl.TEXTURE0);
   function reset() {
-    gl.bindTexture(gl.TEXTURE_2D, originalImageTexture);    
+    gl.bindTexture(gl.TEXTURE_2D, originalImageTexture);
   }
 
   reset();
@@ -142,13 +138,15 @@ function Fracs(options) {
     gl.STATIC_DRAW
   );
 
+  renderShader = GLUtils.compileShader(gl, gl.FRAGMENT_SHADER, '2d-render-shader');
   convolveShader = GLUtils.compileShader(gl, gl.FRAGMENT_SHADER, '2d-fragment-shader');
   vertexShader = GLUtils.compileShader(gl, gl.VERTEX_SHADER, '2d-vertex-shader');
   program = GLUtils.makeProgram(gl, vertexShader, convolveShader);
 
   GLUtils.linkProgram(gl, program);
+  
+  gl.useProgram(program);
   positionLocation = gl.getAttribLocation(program, "a_position");
-  resolutionLocation = gl.getUniformLocation(program, "canvasPixels");
   kernelLocation = gl.getUniformLocation(program, "convolutionMatrix");
   yFlipLocation = gl.getUniformLocation(program, "yFlip");
   daLocation = gl.getUniformLocation(program, "DA");
@@ -168,14 +166,20 @@ function Fracs(options) {
 
   gl.enableVertexAttribArray(positionLocation);
   gl.vertexAttribPointer(positionLocation, 2, gl.FLOAT, false, 0, 0);
-  gl.uniform1i(gl.getUniformLocation(program, "uSampler0"), 0);
 
+  gl.uniform1i(gl.getUniformLocation(program, "uSampler0"), 0);
+  gl.uniform1f(gl.getUniformLocation(program, "canvasPixels"), parseFloat(resolution));
+
+  var renderProgram = GLUtils.makeProgram(gl, GLUtils.compileShader(gl, gl.VERTEX_SHADER, '2d-vertex-shader'), renderShader);
+  gl.linkProgram(renderProgram);
+
+  gl.useProgram(renderProgram);
+  gl.uniform1i(gl.getUniformLocation(renderProgram, "uSampler0"), 0);
+  gl.uniform1f(gl.getUniformLocation(renderProgram, "canvasPixels"), parseFloat(resolution))
   
-  gl.uniform1f(resolutionLocation, parseFloat(resolution));
 
   function setFramebuffer(fbo, width, height) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-    gl.uniform1f(resolutionLocation, canvas.width);
     gl.viewport(0, 0, width, height);
   }
 
@@ -195,8 +199,8 @@ function Fracs(options) {
 
   return {
     update: function(state) {
-      setFramebuffer(framebuffers[currentFbo], canvas.width, canvas.height);      
-      gl.uniform1fv(kernelLocation, laplace);
+      gl.useProgram(program);
+
       gl.uniform1f(mouseXLocation, parseFloat(mouseX));
       gl.uniform1f(mouseYLocation, parseFloat(mouseY));
       gl.uniform1i(mousePressedLocation, mousePressed ? 1 : 0);
@@ -207,14 +211,17 @@ function Fracs(options) {
       gl.uniform1f(tLocation, parseFloat(state.t));
       gl.uniform1f(paintSizeLocation, parseFloat(state.paintSize));
       gl.uniform1f(gravityLocation, parseFloat(state.gravity));
-      
+
+	  gl.bindTexture(gl.TEXTURE_2D, textures[currentFbo % 2]);
+	  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[(currentFbo + 1) % 2]);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
-      gl.bindTexture(gl.TEXTURE_2D, textures[currentFbo]);
-      currentFbo = (currentFbo + 1) % 2;
+      currentFbo += 1;
     },
     reset,
-    render: function() {
-      setFramebuffer(undefined, canvas.width, canvas.height);
+    render: function() {      
+      gl.useProgram(renderProgram);
+      gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+      gl.bindTexture(gl.TEXTURE_2D, textures[0]);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
     },
     canvas: canvas
