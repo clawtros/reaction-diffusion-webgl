@@ -15,13 +15,29 @@
         width: 90vmin;
         cursor: pointer;
       }
+      #instructions {
+        position: fixed;
+        top:0; left:0; right:0; bottom:0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: rgba(0,0,0,0,.6);
+        pointer-events: none;
+        transition: opacity 2s;
+      }
+      #text {
+        font-size: 48px;
+      }
     </style>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.6.2/dat.gui.js"></script>
   </head>
   <body>
-
     <canvas id="c"></canvas>
+    <div id="instructions">
+      <div id="text">click and drag 'pon this thing</div>
+    </div> 
+    
     <script id="2d-vertex-shader" type="x-shader/x-vertex">
       attribute vec2 a_position;
       uniform sampler2D uSampler0;
@@ -116,6 +132,9 @@
     </script>
     <script src="fastrd.js"></script>
     <script>
+      document.addEventListener("click", function() {
+        document.getElementById("instructions").style.opacity = 0;
+      })
       window.addEventListener("load", function() {
 
         var fracs = Fracs({
