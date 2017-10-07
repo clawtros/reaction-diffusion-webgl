@@ -14,6 +14,7 @@
         margin: auto;
         height: 90vmin;
         width: 90vmin;
+        user-select: none;
         cursor: pointer;
       }
       #instructions {
@@ -63,9 +64,9 @@
       precision highp float;
       #define DIAGONAL 0.5
       #define ADJACENT 1.
-      #define CENTER -6.
+                         #define CENTER -6.
 
-      uniform float canvasPixels;
+                         uniform float canvasPixels;
       uniform sampler2D uSampler0;
       uniform float mouseX;
       uniform float mouseY;
@@ -131,6 +132,9 @@
     <script src="fastrd.js"></script>
     <script>
       document.addEventListener("mousedown", function() {
+        document.getElementById("instructions").style.opacity = 0;
+      })
+      document.addEventListener("touchstart", function() {
         document.getElementById("instructions").style.opacity = 0;
       })
       window.addEventListener("load", function() {
