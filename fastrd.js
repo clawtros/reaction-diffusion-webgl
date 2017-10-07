@@ -196,9 +196,9 @@ function Fracs(options) {
 
   canvas.addEventListener("touchmove", e=>{
     const boundingRect = canvas.getBoundingClientRect();
-    console.log(boundingRect, e.touches[0]);
     mousePressed = true;
-    updatePointerPosition(e.touches[0].clientX - boundingRect.left, e.touches[0].clientY - boundingRect.top)
+    updatePointerPosition(e.touches[0].clientX - boundingRect.left, e.touches[0].clientY - boundingRect.top);
+    e.preventDefault();
   });
 
   ["mouseup", "touchend"].map(eventType=>
