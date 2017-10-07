@@ -182,20 +182,33 @@ function Fracs(options) {
     gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
     gl.viewport(0, 0, width, height);
   }
-
-  canvas.addEventListener("mousemove", e=>{
+  
+  function updatePointerPosition(x, y) {
     const boundingRect = canvas.getBoundingClientRect();
-    mouseX = e.offsetX / boundingRect.width;
-    mouseY = 1- e.offsetY / boundingRect.width;
-  })
+    mouseX = x / boundingRect.width;
+    mouseY = 1 - y / boundingRect.height;    
+  }
 
-  document.addEventListener("mouseup", e=>{
-    mousePressed = false;
-  })
+  
+  canvas.addEventListener("mousemove", e=>{
+    updatePointerPosition(e.offsetX, e.offsetY);
+  });
 
-  canvas.addEventListener("mousedown", e=>{
+  canvas.addEventListener("touchmove", e=>{
+    const boundingRect = canvas.getBoundingClientRect();
+    console.log(boundingRect, e.touches[0]);
     mousePressed = true;
-  })
+    updatePointerPosition(e.touches[0].clientX - boundingRect.left, e.touches[0].clientY - boundingRect.top)
+  });
+
+  ["mouseup", "touchend"].map(eventType=>
+    document.addEventListener(eventType, e=>{
+      mousePressed = false;
+  }));
+
+  ["mousedown"].map(eventType=>canvas.addEventListener(eventType, e=>{
+    mousePressed = true;
+  }));
 
   return {
     update: function(state) {
@@ -211,7 +224,7 @@ function Fracs(options) {
       gl.uniform1f(tLocation, parseFloat(state.t));
       gl.uniform1f(paintSizeLocation, parseFloat(state.paintSize));
       gl.uniform1f(gravityLocation, parseFloat(state.gravity));
-
+      state.t += 1;
 	  gl.bindTexture(gl.TEXTURE_2D, textures[currentFbo % 2]);
 	  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffers[(currentFbo + 1) % 2]);
       gl.drawArrays(gl.TRIANGLES, 0, 6);
